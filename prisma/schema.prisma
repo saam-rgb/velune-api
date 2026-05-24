@@ -1,0 +1,121 @@
+// Velune — Prisma Schema (Neon PostgreSQL)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  AUTHOR
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum Category {
+  Tech
+  Fashion
+  Health
+  Lifestyle
+  Grooming
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  password       String
+  name           String
+  role           Role      @default(AUTHOR)
+  bio            String?
+  avatarUrl      String?
+  refreshTokens  RefreshToken[]
+  articles       Article[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model Article {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  title       String
+  excerpt     String
+  body        Json          // Array of paragraph strings / rich content blocks
+  category    Category
+  status      ArticleStatus @default(DRAFT)
+  featured    Boolean       @default(false)
+  hero        Boolean       @default(false)
+  readTime    String?
+  coverImage  String?       // Cloudinary URL
+  tags        String[]      @default([])
+  views       Int           @default(0)
+  authorId    String
+  author      User          @relation(fields: [authorId], references: [id])
+  publishedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([featured])
+  @@index([slug])
+  @@map("articles")
+}
+
+model Subscriber {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String?
+  confirmed   Boolean  @default(false)
+  token       String?  @unique
+  source      String?  // 'homepage', 'article', etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("subscribers")
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String?
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("contact_messages")
+}
+
+model PageView {
+  id        String   @id @default(cuid())
+  path      String
+  articleId String?
+  date      DateTime @default(now())
+  source    String?
+
+  @@index([path])
+  @@index([date])
+  @@map("page_views")
+}
